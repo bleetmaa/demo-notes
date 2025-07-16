@@ -41,7 +41,7 @@ jobs:
     - name: Build frontend
       working-directory: ./frontend
       run: |
-        NODE_OPTIONS=--openssl-legacy-provider npm run build
+        npm run build
 
     - name: Build backend
       working-directory: ./backend
