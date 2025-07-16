@@ -1,0 +1,79 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  FRONTEND_IMAGE_NAME: ghcr.io/${{ github.repository }}/demo-notes-frontend
+  BACKEND_IMAGE_NAME: ghcr.io/${{ github.repository }}/demo-notes-backend
+  CLUSTER_NAME: your-cluster-name # To be filled with your K8s cluster name
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+
+    - name: Install dependencies
+      run: |
+        npm run install:all
+
+    - name: Build applications
+      run: npm run build
+
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v2
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Build and push frontend image
+      uses: docker/build-push-action@v4
+      with:
+        context: ./frontend
+        push: true
+        tags: ${{ env.FRONTEND_IMAGE_NAME }}:${{ github.sha }},${{ env.FRONTEND_IMAGE_NAME }}:latest
+
+    - name: Build and push backend image
+      uses: docker/build-push-action@v4
+      with:
+        context: ./backend
+        push: true
+        tags: ${{ env.BACKEND_IMAGE_NAME }}:${{ github.sha }},${{ env.BACKEND_IMAGE_NAME }}:latest
+
+    - name: Set up kubectl
+      uses: azure/k8s-set-context@v3
+      with:
+        method: kubeconfig
+        kubeconfig: ${{ secrets.KUBE_CONFIG }}
+        context: your-context-name  # Update this with your cluster context
+
+    - name: Deploy to Kubernetes
+      run: |
+        # Create image pull secret for GitHub Container Registry
+        kubectl create secret docker-registry ghcr-secret \
+          --docker-server=ghcr.io \
+          --docker-username=${{ github.actor }} \
+          --docker-password=${{ secrets.GITHUB_TOKEN }} \
+          --docker-email=${{ github.actor }}@users.noreply.github.com \
+          -n default --dry-run=client -o yaml | kubectl apply -f -
+
+        # Update image tags in deployment files
+        sed -i "s|{{FRONTEND_IMAGE}}|${{ env.FRONTEND_IMAGE_NAME }}:${{ github.sha }}|g" k8s/frontend.yaml
+        sed -i "s|{{BACKEND_IMAGE}}|${{ env.BACKEND_IMAGE_NAME }}:${{ github.sha }}|g" k8s/backend.yaml
+        
+        # Apply Kubernetes manifests
+        kubectl apply -f k8s/
