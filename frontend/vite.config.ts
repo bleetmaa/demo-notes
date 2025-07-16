@@ -5,11 +5,10 @@ import vue from '@vitejs/plugin-vue'
 export default defineConfig({
   plugins: [vue()],
   build: {
-    commonjsOptions: {
-      transformMixedEsModules: true
-    }
+    target: 'es2015',
+    minify: false
   },
-  optimizeDeps: {
-    include: ['vue']
+  define: {
+    'process.env': {}
   }
 })
