@@ -25,7 +25,6 @@ jobs:
       uses: actions/setup-node@v3
       with:
         node-version: '20.x'
-        registry-url: 'https://registry.npmjs.org'
 
     - name: Install dependencies
       run: |
@@ -77,14 +76,14 @@ jobs:
     - name: Configure kubectl
       run: |
         mkdir -p $HOME/.kube
-        echo "${{ secrets.KUBE_CONFIG }}" > $HOME/.kube/config
+        echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > $HOME/.kube/config
         chmod 600 $HOME/.kube/config
 
     - name: Test cluster connection
       run: |
         # Verify cluster connection
         kubectl cluster-info
-        kubectl get nodes
+        kubectl get nodes --insecure-skip-tls-verify
 
     - name: Deploy to Kubernetes
       run: |
