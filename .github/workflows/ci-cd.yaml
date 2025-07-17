@@ -78,11 +78,13 @@ jobs:
         mkdir -p $HOME/.kube
         echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > $HOME/.kube/config
         chmod 600 $HOME/.kube/config
+        # Set insecure flag globally for this cluster
+        kubectl config set-cluster $(kubectl config current-context) --insecure-skip-tls-verify=true
 
     - name: Test cluster connection
       run: |
-        # Verify cluster connection
-        kubectl cluster-info
+        # Verify cluster connection (skip TLS verification for self-signed certs)
+        kubectl cluster-info --insecure-skip-tls-verify
         kubectl get nodes --insecure-skip-tls-verify
 
     - name: Deploy to Kubernetes
@@ -93,11 +95,11 @@ jobs:
           --docker-username=${{ github.actor }} \
           --docker-password=${{ secrets.GITHUB_TOKEN }} \
           --docker-email=${{ github.actor }}@users.noreply.github.com \
-          -n default --dry-run=client -o yaml | kubectl apply -f -
+          -n default --dry-run=client -o yaml --insecure-skip-tls-verify | kubectl apply -f - --insecure-skip-tls-verify
 
         # Update image tags in deployment files
         sed -i "s|{{FRONTEND_IMAGE}}|${{ env.FRONTEND_IMAGE_NAME }}:${{ github.sha }}|g" k8s/frontend.yaml
         sed -i "s|{{BACKEND_IMAGE}}|${{ env.BACKEND_IMAGE_NAME }}:${{ github.sha }}|g" k8s/backend.yaml
         
         # Apply Kubernetes manifests
-        kubectl apply -f k8s/
+        kubectl apply -f k8s/ --insecure-skip-tls-verify
