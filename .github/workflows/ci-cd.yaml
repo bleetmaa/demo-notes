@@ -70,7 +70,7 @@ jobs:
         tags: ${{ env.BACKEND_IMAGE_NAME }}:${{ github.sha }},${{ env.BACKEND_IMAGE_NAME }}:latest
 
     - name: Set up kubectl
-      uses: kubernetes-sigs/setup-kubectl@v1
+      uses: azure/setup-kubectl@v3
       with:
         version: 'latest'
 
