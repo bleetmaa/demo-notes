@@ -29,10 +29,32 @@ app.get('/health', (req, res) => {
 });
 
 async function startServer() {
-  try {
-    await AppDataSource.initialize();
-    console.log('Database connection established');
+  const maxRetries = 10;
+  let retries = 0;
+  
+  while (retries < maxRetries) {
+    try {
+      console.log(`Attempting to connect to database (attempt ${retries + 1}/${maxRetries})...`);
+      await AppDataSource.initialize();
+      console.log('Database connection established successfully');
+      break;
+    } catch (error) {
+      retries++;
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error(`Database connection failed (attempt ${retries}/${maxRetries}):`, errorMessage);
+      
+      if (retries >= maxRetries) {
+        console.error('Max retries reached. Exiting.');
+        process.exit(1);
+      }
+      
+      // Wait 5 seconds before retrying
+      console.log(`Waiting 5 seconds before retry...`);
+      await new Promise(resolve => setTimeout(resolve, 5000));
+    }
+  }
 
+  try {
     app.listen(port, () => {
       console.log(`Server is running on port ${port}`);
     });
