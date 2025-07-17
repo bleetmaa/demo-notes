@@ -97,9 +97,13 @@ jobs:
           --docker-email=${{ github.actor }}@users.noreply.github.com \
           -n default --dry-run=client -o yaml --insecure-skip-tls-verify | kubectl apply -f - --insecure-skip-tls-verify
 
-        # Update image tags in deployment files
+        # Generate base64 encoded postgres password
+        POSTGRES_PASSWORD_B64=$(echo -n "${{ secrets.POSTGRES_PASSWORD || 'defaultpassword123' }}" | base64)
+
+        # Update image tags and secrets in deployment files
         sed -i "s|{{FRONTEND_IMAGE}}|${{ env.FRONTEND_IMAGE_NAME }}:${{ github.sha }}|g" k8s/frontend.yaml
         sed -i "s|{{BACKEND_IMAGE}}|${{ env.BACKEND_IMAGE_NAME }}:${{ github.sha }}|g" k8s/backend.yaml
+        sed -i "s|\${BASE64_POSTGRES_PASSWORD}|${POSTGRES_PASSWORD_B64}|g" k8s/postgres.yaml
         
         # Apply Kubernetes manifests
         kubectl apply -f k8s/ --insecure-skip-tls-verify
