@@ -89,13 +89,16 @@ jobs:
 
     - name: Deploy to Kubernetes
       run: |
+        # Delete existing secret if it exists, then recreate it
+        kubectl delete secret ghcr-secret --insecure-skip-tls-verify || true
+        
         # Create image pull secret for GitHub Container Registry
         kubectl create secret docker-registry ghcr-secret \
           --docker-server=ghcr.io \
           --docker-username=${{ github.actor }} \
           --docker-password=${{ secrets.GITHUB_TOKEN }} \
           --docker-email=${{ github.actor }}@users.noreply.github.com \
-          -n default --dry-run=client -o yaml --insecure-skip-tls-verify | kubectl apply -f - --insecure-skip-tls-verify
+          -n default --insecure-skip-tls-verify
 
         # Generate base64 encoded postgres password
         POSTGRES_PASSWORD_B64=$(echo -n "${{ secrets.POSTGRES_PASSWORD || 'defaultpassword123' }}" | base64)
@@ -105,11 +108,41 @@ jobs:
         sed -i "s|{{BACKEND_IMAGE}}|${{ env.BACKEND_IMAGE_NAME }}:${{ github.sha }}|g" k8s/backend.yaml
         sed -i "s|\${BASE64_POSTGRES_PASSWORD}|${POSTGRES_PASSWORD_B64}|g" k8s/postgres.yaml
 
-        # Create storage directory on worker node (for local storage)
-        kubectl debug node/k8s-worker -it --image=busybox --insecure-skip-tls-verify -- mkdir -p /tmp/postgres-data || true
+        # Create storage directory using a privileged pod
+        cat <<EOF | kubectl apply -f - --insecure-skip-tls-verify
+apiVersion: v1
+kind: Pod
+metadata:
+  name: setup-storage
+spec:
+  nodeName: k8s-worker
+  hostPID: true
+  containers:
+  - name: setup
+    image: busybox
+    command: ["/bin/sh", "-c", "mkdir -p /host/tmp/postgres-data && chmod 755 /host/tmp/postgres-data"]
+    volumeMounts:
+    - name: host-root
+      mountPath: /host
+    securityContext:
+      privileged: true
+  volumes:
+  - name: host-root
+    hostPath:
+      path: /
+  restartPolicy: Never
+EOF
+
+        # Wait for storage setup to complete
+        kubectl wait --for=condition=complete pod/setup-storage --timeout=60s --insecure-skip-tls-verify || true
+        kubectl delete pod setup-storage --insecure-skip-tls-verify || true
 
         # Deploy storage configuration first
         kubectl apply -f k8s/local-storage.yaml --insecure-skip-tls-verify
         
         # Apply Kubernetes manifests
         kubectl apply -f k8s/ --insecure-skip-tls-verify
+
+        # Restart deployments to pick up the new secret
+        kubectl rollout restart deployment/frontend --insecure-skip-tls-verify
+        kubectl rollout restart deployment/backend --insecure-skip-tls-verify
