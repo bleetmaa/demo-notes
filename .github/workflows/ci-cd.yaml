@@ -96,11 +96,13 @@ jobs:
       run: |
         # Generate base64 encoded postgres password
         POSTGRES_PASSWORD_B64=$(echo -n "${{ secrets.POSTGRES_PASSWORD || 'defaultpassword123' }}" | base64)
+        POSTGRES_PASSWORD_PLAIN="${{ secrets.POSTGRES_PASSWORD || 'defaultpassword123' }}"
 
         # Update image tags and secrets in deployment files
         sed -i "s|{{FRONTEND_IMAGE}}|${{ env.FRONTEND_IMAGE_NAME }}:${{ github.sha }}|g" k8s/frontend.yaml
         sed -i "s|{{BACKEND_IMAGE}}|${{ env.BACKEND_IMAGE_NAME }}:${{ github.sha }}|g" k8s/backend.yaml
         sed -i "s|\${BASE64_POSTGRES_PASSWORD}|${POSTGRES_PASSWORD_B64}|g" k8s/postgres.yaml
+        sed -i "s|\${POSTGRES_PASSWORD}|${POSTGRES_PASSWORD_PLAIN}|g" k8s/postgres.yaml
 
         # Create storage directory using a privileged pod
         cat <<'EOF' | kubectl apply -f - --insecure-skip-tls-verify
