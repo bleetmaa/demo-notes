@@ -3,11 +3,11 @@ import { AppDataSource } from '../index.js';
 import { Note } from '../entities/Note.js';
 
 export const noteRouter = Router();
-const noteRepository = AppDataSource.getRepository(Note);
 
 // Get all notes
 noteRouter.get('/', async (req, res) => {
   try {
+    const noteRepository = AppDataSource.getRepository(Note);
     const notes = await noteRepository.find({
       order: {
         updatedAt: 'DESC'
@@ -22,6 +22,7 @@ noteRouter.get('/', async (req, res) => {
 // Get a single note
 noteRouter.get('/:id', async (req, res) => {
   try {
+    const noteRepository = AppDataSource.getRepository(Note);
     const note = await noteRepository.findOneBy({ id: req.params.id });
     if (!note) {
       return res.status(404).json({ error: 'Note not found' });
@@ -35,6 +36,7 @@ noteRouter.get('/:id', async (req, res) => {
 // Create a note
 noteRouter.post('/', async (req, res) => {
   try {
+    const noteRepository = AppDataSource.getRepository(Note);
     const { title, content } = req.body;
     const note = noteRepository.create({ title, content });
     await noteRepository.save(note);
@@ -47,6 +49,7 @@ noteRouter.post('/', async (req, res) => {
 // Update a note
 noteRouter.put('/:id', async (req, res) => {
   try {
+    const noteRepository = AppDataSource.getRepository(Note);
     const { title, content } = req.body;
     const note = await noteRepository.findOneBy({ id: req.params.id });
     if (!note) {
@@ -64,6 +67,7 @@ noteRouter.put('/:id', async (req, res) => {
 // Delete a note
 noteRouter.delete('/:id', async (req, res) => {
   try {
+    const noteRepository = AppDataSource.getRepository(Note);
     const note = await noteRepository.findOneBy({ id: req.params.id });
     if (!note) {
       return res.status(404).json({ error: 'Note not found' });
