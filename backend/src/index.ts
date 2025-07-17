@@ -10,11 +10,7 @@ const port = process.env.PORT || 3000;
 // Create TypeORM connection
 export const AppDataSource = new DataSource({
   type: "postgres",
-  host: process.env.DB_HOST || "localhost",
-  port: parseInt(process.env.DB_PORT || "5432"),
-  username: process.env.DB_USER || "demo_user",
-  password: process.env.DB_PASSWORD || "demo_password",
-  database: process.env.DB_NAME || "demo_notes",
+  url: process.env.DATABASE_URL || "postgresql://demo_user:demo_password@localhost:5432/demo_notes",
   synchronize: true,
   logging: true,
   entities: [Note],
