@@ -104,6 +104,12 @@ jobs:
         sed -i "s|{{FRONTEND_IMAGE}}|${{ env.FRONTEND_IMAGE_NAME }}:${{ github.sha }}|g" k8s/frontend.yaml
         sed -i "s|{{BACKEND_IMAGE}}|${{ env.BACKEND_IMAGE_NAME }}:${{ github.sha }}|g" k8s/backend.yaml
         sed -i "s|\${BASE64_POSTGRES_PASSWORD}|${POSTGRES_PASSWORD_B64}|g" k8s/postgres.yaml
+
+        # Create storage directory on worker node (for local storage)
+        kubectl debug node/k8s-worker -it --image=busybox --insecure-skip-tls-verify -- mkdir -p /tmp/postgres-data || true
+
+        # Deploy storage configuration first
+        kubectl apply -f k8s/local-storage.yaml --insecure-skip-tls-verify
         
         # Apply Kubernetes manifests
         kubectl apply -f k8s/ --insecure-skip-tls-verify
