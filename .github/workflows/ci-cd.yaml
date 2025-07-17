@@ -109,29 +109,29 @@ jobs:
         sed -i "s|\${BASE64_POSTGRES_PASSWORD}|${POSTGRES_PASSWORD_B64}|g" k8s/postgres.yaml
 
         # Create storage directory using a privileged pod
-        cat <<EOF | kubectl apply -f - --insecure-skip-tls-verify
-apiVersion: v1
-kind: Pod
-metadata:
-  name: setup-storage
-spec:
-  nodeName: k8s-worker
-  hostPID: true
-  containers:
-  - name: setup
-    image: busybox
-    command: ["/bin/sh", "-c", "mkdir -p /host/tmp/postgres-data && chmod 755 /host/tmp/postgres-data"]
-    volumeMounts:
-    - name: host-root
-      mountPath: /host
-    securityContext:
-      privileged: true
-  volumes:
-  - name: host-root
-    hostPath:
-      path: /
-  restartPolicy: Never
-EOF
+        cat <<'EOF' | kubectl apply -f - --insecure-skip-tls-verify
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          name: setup-storage
+        spec:
+          nodeName: k8s-worker
+          hostPID: true
+          containers:
+          - name: setup
+            image: busybox
+            command: ["/bin/sh", "-c", "mkdir -p /host/tmp/postgres-data && chmod 755 /host/tmp/postgres-data"]
+            volumeMounts:
+            - name: host-root
+              mountPath: /host
+            securityContext:
+              privileged: true
+          volumes:
+          - name: host-root
+            hostPath:
+              path: /
+          restartPolicy: Never
+        EOF
 
         # Wait for storage setup to complete
         kubectl wait --for=condition=complete pod/setup-storage --timeout=60s --insecure-skip-tls-verify || true
