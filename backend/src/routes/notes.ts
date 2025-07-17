@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { AppDataSource } from '../index';
-import { Note } from '../entities/Note';
+import { AppDataSource } from '../index.js';
+import { Note } from '../entities/Note.js';
 
 export const noteRouter = Router();
 const noteRepository = AppDataSource.getRepository(Note);

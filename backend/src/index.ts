@@ -1,8 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import { DataSource } from 'typeorm';
-import { Note } from './entities/Note';
-import { noteRouter } from './routes/notes';
+import { Note } from './entities/Note.js';
+import { noteRouter } from './routes/notes.js';
 
 const app = express();
 const port = process.env.PORT || 3000;
