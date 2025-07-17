@@ -9,7 +9,7 @@ on:
 env:
   FRONTEND_IMAGE_NAME: ghcr.io/${{ github.repository }}/demo-notes-frontend
   BACKEND_IMAGE_NAME: ghcr.io/${{ github.repository }}/demo-notes-backend
-  CLUSTER_NAME: your-cluster-name # To be filled with your K8s cluster name
+  KUBERNETES_HOST: ${{ secrets.KUBERNETES_PUBLIC_IP }}
 
 jobs:
   build:
@@ -70,11 +70,21 @@ jobs:
         tags: ${{ env.BACKEND_IMAGE_NAME }}:${{ github.sha }},${{ env.BACKEND_IMAGE_NAME }}:latest
 
     - name: Set up kubectl
-      uses: azure/k8s-set-context@v3
+      uses: kubernetes-sigs/setup-kubectl@v1
       with:
-        method: kubeconfig
-        kubeconfig: ${{ secrets.KUBE_CONFIG }}
-        context: your-context-name  # Update this with your cluster context
+        version: 'latest'
+
+    - name: Configure kubectl
+      run: |
+        mkdir -p $HOME/.kube
+        echo "${{ secrets.KUBE_CONFIG }}" > $HOME/.kube/config
+        chmod 600 $HOME/.kube/config
+
+    - name: Test cluster connection
+      run: |
+        # Verify cluster connection
+        kubectl cluster-info
+        kubectl get nodes
 
     - name: Deploy to Kubernetes
       run: |
