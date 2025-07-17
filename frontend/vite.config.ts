@@ -5,7 +5,6 @@ import { nodePolyfills } from 'vite-plugin-node-polyfills'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
-    vue(),
     nodePolyfills({
       globals: {
         Buffer: true,
@@ -13,14 +12,16 @@ export default defineConfig({
         process: true
       },
       protocolImports: true,
-      include: ['crypto']
-    })
+      include: ['crypto', 'buffer', 'stream', 'util']
+    }),
+    vue()
   ],
   build: {
     target: 'es2015',
     minify: false
   },
   define: {
-    'process.env': {}
+    'process.env': {},
+    global: {}
   }
 })
